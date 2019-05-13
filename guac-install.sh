@@ -16,71 +16,19 @@ NC='\033[0m' # No Color
 # Log Location
 LOG="/tmp/guacamole_${GUACVERSION}_build.log"
 
-# Get script arguments for non-interactive mode
-while [ "$1" != "" ]; do
-    case $1 in
-        -m | --mysqlpwd )
-            shift
-            mysqlpwd="$1"
-            ;;
-        -g | --guacpwd )
-            shift
-            guacpwd="$1"
-            ;;
-        -u | --mysqluser )
-            shift
-            mysqluser="$1"
-            ;;
-        -d | --database )
-            shift
-            DB="$1"
-            ;;
-    esac
-    shift
-done
+#MSSQL Database Name
+DB="guacamole_db"
 
-# Checking if mysql user given
-if [ -z "$mysqluser" ]; then
-    mysqluser="guacamole_user"
-fi
-
-# Checking if database name given
-if [ -z "$DB" ]; then
-    DB="guacamole_db"
-fi
-
-# Get MySQL root password and Guacamole User password
-if [ -n "$mysqlpwd" ] && [ -n "$guacpwd" ]; then
-        mysqlrootpassword=$mysqlpwd
-        guacdbuserpassword=$guacpwd
-else
-    echo
     while true
     do
-        read -s -p "Enter a MySQL ROOT Password: " mysqlrootpassword
+        read -s -p "Enter a Guacamole MS SQL User Database Password: " guacdbuserpassword
         echo
-        read -s -p "Confirm MySQL ROOT Password: " password2
-        echo
-        [ "$mysqlrootpassword" = "$password2" ] && break
-        echo "Passwords don't match. Please try again."
-        echo
-    done
-    echo
-    while true
-    do
-        read -s -p "Enter a Guacamole User Database Password: " guacdbuserpassword
-        echo
-        read -s -p "Confirm Guacamole User Database Password: " password2
+        read -s -p "Confirm Guacamole MS SQL User Database Password: " password2
         echo
         [ "$guacdbuserpassword" = "$password2" ] && break
         echo "Passwords don't match. Please try again."
         echo
     done
-    echo
-fi
-
-debconf-set-selections <<< "mysql-server mysql-server/root_password password $mysqlrootpassword"
-debconf-set-selections <<< "mysql-server mysql-server/root_password_again password $mysqlrootpassword"
 
 # Ubuntu and Debian have different package names for libjpeg
 # Ubuntu and Debian versions have differnet package names for libpng-dev
@@ -119,29 +67,16 @@ apt-get -qq update
 # Tomcat 8.0.x is End of Life, however Tomcat 7.x is not...
 # If Tomcat 8.5.x or newer is available install it, otherwise install Tomcat 7
 # I have not testing with Tomcat9...
-if [[ $(apt-cache show tomcat8 | egrep "Version: 8.[5-9]" | wc -l) -gt 0 ]]
-then
-    TOMCAT="tomcat8"
-else
-    TOMCAT="tomcat7"
-fi
-
-if [ -z $(command -v mysql)]
-then
-    MYSQL="mysql-server mysql-client mysql-common mysql-utilities"
-else
-    MYSQL=""
-fi
-
 # Uncomment to manually force a tomcat version
-#TOMCAT=""
+
+TOMCAT="8.5.39"
 
 # Install features
 echo -e "${BLUE}Installing dependencies. This might take a few minutes...${NC}"
 
 apt-get -y install build-essential libcairo2-dev ${JPEGTURBO} ${LIBPNG} libossp-uuid-dev libavcodec-dev libavutil-dev \
 libswscale-dev libfreerdp-dev libpango1.0-dev libssh2-1-dev libtelnet-dev libvncserver-dev libpulse-dev libssl-dev \
-libvorbis-dev libwebp-dev ${MYSQL} libmysql-java ${TOMCAT} freerdp-x11 \
+libvorbis-dev libwebp-dev ${TOMCAT} freerdp-x11 \
 ghostscript wget dpkg-dev &>> ${LOG}
 
 if [ $? -ne 0 ]; then
@@ -249,28 +184,6 @@ echo "mysql-password: ${guacdbuserpassword}" >> /etc/guacamole/guacamole.propert
 echo -e "${BLUE}Restarting tomcat...${NC}"
 
 service ${TOMCAT} restart
-if [ $? -ne 0 ]; then
-    echo -e "${RED}Failed${NC}"
-    exit 1
-else
-    echo -e "${GREEN}OK${NC}"
-fi
-
-# Create guacamole_db and grant $mysqluser permissions to it
-
-# SQL code
-SQLCODE="
-create database ${DB};
-create user if not exists '${mysqluser}'@'localhost' identified by \"${guacdbuserpassword}\";
-GRANT SELECT,INSERT,UPDATE,DELETE ON guacamole_db.* TO '${mysqluser}'@'localhost';
-flush privileges;"
-
-# Execute SQL code
-echo ${SQLCODE} | mysql -u root -p${mysqlrootpassword}
-
-# Add Guacamole schema to newly created database
-echo -e "Adding db tables..."
-cat guacamole-auth-jdbc-${GUACVERSION}/mysql/schema/*.sql | mysql -u root -p${mysqlrootpassword} ${DB}
 if [ $? -ne 0 ]; then
     echo -e "${RED}Failed${NC}"
     exit 1
