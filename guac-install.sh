@@ -69,7 +69,7 @@ apt-get -qq update
 # I have not testing with Tomcat9...
 # Uncomment to manually force a tomcat version
 
-TOMCAT="8.5.39"
+TOMCAT="TOMCAT8"
 
 # Install features
 echo -e "${BLUE}Installing dependencies. This might take a few minutes...${NC}"
@@ -170,15 +170,13 @@ BUILD_FOLDER=$(dpkg-architecture -qDEB_BUILD_GNU_TYPE)
 mv guacamole-${GUACVERSION}.war /etc/guacamole/guacamole.war
 ln -s /etc/guacamole/guacamole.war /var/lib/${TOMCAT}/webapps/
 ln -s /usr/local/lib/freerdp/guac*.so /usr/lib/${BUILD_FOLDER}/freerdp/
-ln -s /usr/share/java/mysql-connector-java.jar /etc/guacamole/lib/
-cp guacamole-auth-jdbc-${GUACVERSION}/mysql/guacamole-auth-jdbc-mysql-${GUACVERSION}.jar /etc/guacamole/extensions/
 
 # Configure guacamole.properties
-echo "mysql-hostname: localhost" >> /etc/guacamole/guacamole.properties
-echo "mysql-port: 3306" >> /etc/guacamole/guacamole.properties
-echo "mysql-database: ${DB}" >> /etc/guacamole/guacamole.properties
-echo "mysql-username: ${mysqluser}" >> /etc/guacamole/guacamole.properties
-echo "mysql-password: ${guacdbuserpassword}" >> /etc/guacamole/guacamole.properties
+echo "mssql-hostname: localhost" >> /etc/guacamole/guacamole.properties
+echo "mssql-port: 3306" >> /etc/guacamole/guacamole.properties
+echo "mssql-database: ${DB}" >> /etc/guacamole/guacamole.properties
+echo "mssql-username: ${mysqluser}" >> /etc/guacamole/guacamole.properties
+echo "mssql-password: ${guacdbuserpassword}" >> /etc/guacamole/guacamole.properties
 
 # restart tomcat
 echo -e "${BLUE}Restarting tomcat...${NC}"
